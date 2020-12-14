@@ -19,7 +19,6 @@ debug/main.o
 debug/glew.o
 debug/Databinding.o
 debug/Settings.o
-debug/physics.o
 debug/view.o
 debug/viewformat.o
 debug/qrc_resources.o

@@ -19,7 +19,6 @@ release/main.o
 release/glew.o
 release/Databinding.o
 release/Settings.o
-release/physics.o
 release/view.o
 release/viewformat.o
 release/qrc_resources.o
