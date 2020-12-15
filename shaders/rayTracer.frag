@@ -2,9 +2,9 @@
 #define MAX_VAL  10000.f
 #define MIN_VAL 0.001f
 #define PI 3.1415926535897932384626433832795
-#define ks 0.9f
-#define kd 0.9f
-#define kt 0.9f
+#define ks 0.5f
+#define kd 0.5f
+#define kt 0.5f
 
 /*
 *	In From quad.vert
@@ -23,11 +23,6 @@ uniform vec2 dimensions;
 uniform float leftSpeed;
 uniform float rightSpeed;
 uniform float centerSpeed;
-
-// Rigid Physics
-uniform vec3 pos1;
-uniform vec3 pos2;
-uniform vec3 pos3;
 
 /*
 *	Out to frame buffer
@@ -87,89 +82,66 @@ struct Light {
 */
 //////////////////////////////////////////////////////////////////////////////////////////
 Light sceneLighting[]  = Light[](
-								Light( vec4(2.f, 2.f, -2.f, 1.f), vec4(0.3f, 0.3f, 0.3f, 1.f) ), // key light
-								Light( vec4(-1.f, -2.f, -1.f, 1.f), vec4(0.3f, 0.3f, 0.3f, 1.f) ), // rim light
-								Light( vec4(1.f, 4.f, 3.f, 1.f), vec4(0.2f, 0.3f, 0.5f, 1.f) ), // back light
-								Light( vec4(0.f, -2.f, -1.f, 1.f), vec4(0.3f, 0.3f, 0.3f, 1.f) ) // needs a little umph
+								Light( vec4(10.f, 10.f, -10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ), // key light
+								Light( vec4(-10.f, -10.f, -10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ), // rim light
+								Light( vec4(10.f, 10.f, 10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ) // back light
 								);
+//Light sceneLighting[]  = Light[](
+//								Light( vec4(10.f, 10.f, -10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ) // key light
+//								);
 
 Material foggyGlass = Material(
-							vec4(255.f, 250.f, 240.f, 90.f)/300.f, 
+							vec4(0.3f, 0.3f, 0.3f, 1.f), 
 							vec4(0.4f, 0.4f, 0.2f, 1.f), 
-							vec4(1.f), 
-							vec4(1.f),
+							vec4(0.1f, 0.1f, 0.1f, 1.f), 
+							vec4(0.1f, 0.1f, 0.1f, 1.f), 
 							0.5f,
-							vec3(1.3f, 1.5f, 1.7f),
+							vec3(1.3f, 1.32f, 1.34f),
 							0.1f
 							);
+
 Material salmon = Material(
-							vec4(250.f, 130.f,  110.f, 200.f)/300.f, 
-							vec4(255.f, 90.f,  90.f, 255.f)/255.f, 
-							vec4(1.f), 
-							vec4(1.f),
+							vec4(0.7f, 0.2f,  0.1f, 1.f), 
+							vec4(0.2f, 0.2f, 0.2f, 1.f), 
+							vec4(0.1f, 0.1f, 0.1f, 1.f), 
+							vec4(0.1f, 0.1f, 0.1f, 1.f), 
 							0.5f,
 							vec3(1.5f, 1.6f, 1.6f),
 							0.7f
 							);
 
 Material forest = Material(
-							vec4(100.f, 250.f, 100.f, 255.f)/300.f, 
-							vec4(0.3f, 0.4f, 0.3f, 1.f), 
-							vec4(0.3f, 0.4f, 0.3f, 1.f), 
-							vec4(1.f),
+							vec4(0.1f, 0.7f, 0.2f, 1.f),
+							vec4(0.2f, 0.3f, 0.2f, 1.f), 
+							vec4(0.3f, 0.3f, 0.2f, 1.f), 
+							vec4(0.2f, 0.2f, 0.2f, 1.f), 
 							0.2f,
 							vec3(2.f),
 							0.9f
 							);	
 							
-  float smallRadius = 0.25f;
-  mat4 leftSphereTransformation = transpose(mat4(
+float smallRadius = 0.25f;
+mat4 leftSphereTransformation = transpose(mat4(
   									smallRadius, 0.f, 0.f, -0.5f,
-  									0.f, smallRadius, 0.f, 0.5f*sin(1.f/leftSpeed*time),
-  									0.f, 0.f, smallRadius, 3.f,
+  									0.f, smallRadius, 0.f, 0.5f*sin((1.f/leftSpeed)*time),
+  									0.f, 0.f, smallRadius, 0.5f,
   									0.f, 0.f, 0.f, 1.f
   									));
 
-  float bigRadius = 1.1f;
-  mat4 rightSphereTransformation = transpose(mat4(
-  										bigRadius, 0.f, 0.f, 0.3f,
-  										0.f, bigRadius, 0.f, 0.01f*cos(1.f/rightSpeed*time),
-  										0.f, 0.f, bigRadius, 6.f,
+float bigRadius = 1.1f;
+mat4 rightSphereTransformation = transpose(mat4(
+  										bigRadius, 0.f, 0.f, 0.5f,
+  										0.f, bigRadius, 0.f, 0.01f*cos((1.f/rightSpeed)*time),
+  										0.f, 0.f, bigRadius, 1.f,
   										0.f, 0.f, 0.f, 1.f
   									));
 
-  mat4 centerSphereTransformation = transpose(mat4(
+mat4 centerSphereTransformation = transpose(mat4(
   											1.f, 0.f, 0.f, 0.f,
-  											0.f, 1.f, 0.f, -0.25f*sin(1.f/centerSpeed*time),
-  											0.f, 0.f, 1.f, 0.f,
-  											0.f, 0.f, 0.f, -1.f
+  											0.f, 1.f, 0.f, -0.25f*sin((1.f/centerSpeed)*time),
+  											0.f, 0.f, 1.f, -1.f,
+  											0.f, 0.f, 0.f, 1.f
   										));
-
-// TODO: Amir 
-// float smallRadius = 0.25f;
-// mat4 leftSphereTransformation = transpose(mat4(
-// 									smallRadius, 0.f, 0.f, -pos1[0],
-// 									0.f, smallRadius, 0.f, -pos1[1],
-// 									0.f, 0.f, smallRadius, -pos1[2],
-// 									0.f, 0.f, 0.f, 1.f
-// 									));
-
-// float bigRadius = 1.1f;
-// mat4 rightSphereTransformation = transpose(mat4(
-// 										bigRadius, 0.f, 0.f, -pos2[0],
-// 										0.f, bigRadius, 0.f, -pos2[1],
-// 										0.f, 0.f, bigRadius, -pos2[2],
-// 										0.f, 0.f, 0.f, 1.f
-// 									));
-
-
-// mat4 centerSphereTransformation = transpose(mat4(
-// 											1.f, 0.f, 0.f, -pos3[0],
-// 											0.f, 1.f, 0.f, -pos3[1],
-// 											0.f, 0.f, 1.f, -pos3[2],
-// 											0.f, 0.f, 0.f, 1.f
-// 										));
-
 
 Sphere leftSphere = Sphere(leftSphereTransformation, salmon);
 Sphere rightSphere = Sphere(rightSphereTransformation, forest);
@@ -250,7 +222,6 @@ Data intersect(inout Ray ray) {
 	float t = MAX_VAL;
 
 	for (int i = 0; i < 3; i++){ // for each Sphere
-		// TODO: remove, simple sphere ray intersect test
 		Sphere sphere = sceneSpheres[i];
 		mat4 transformation = sphere.transformation;
 
@@ -316,17 +287,17 @@ vec4 computeLighting(inout Ray ray, inout Data data) {
 		vec4 vertexToLight = lightPosition - vertex;
 
 		float dist = distance(light.position, vertex);
-		float denom = 2.f*exp(dist*dist);
+		float denom = exp(dist*dist);
 		float attenuation = min(1.f, 1.f/denom);
 		
 		float cosTheta =  min(1.f, max(0.f, dot(normalize(normal.xyz), normalize(vertexToLight.xyz))));
 		vec4 diffuseComponent = attenuation*I*kd*data.mat.diffuseColor*cosTheta;
 
-		vec4 reflected = -normalize(2.f*normal*(min(dot(normal, vertexToLight), 1.f)) - vertexToLight);
+		vec4 reflected = -normalize(2.f*normal*(min(max(dot(normal, vertexToLight), 0.f), 1.f)) - vertexToLight);
 		float cosPhi = min(1.f, max(0.f, dot(reflected.xyz, ray.d.xyz)));
 		vec4 specularComponent = I*ks*data.mat.specularColor*pow(cosPhi, data.mat.shininess);
 
-		vec4 ambientComponent = vec4(0.1f);
+		vec4 ambientComponent = vec4(0.f);
 
 		radiance += ambientComponent;
 		radiance += diffuseComponent;
@@ -352,9 +323,7 @@ vec4 traceRays(inout Ray primaryRay) {
 	Ray currentRay = primaryRay;
 	Data currentData = primaryData;
 
-	float gamma = 1.f; // Lose energy as depths increase
-
-	for (int i = 0; i < depth + 1; i++) { // How many layers we want 
+	for (int i = 0; i < depth; i++) { // How many layers we want 
 
 		float t = currentData.t;
 		vec4 vertex = currentRay.P + t*currentRay.d;
@@ -372,13 +341,13 @@ vec4 traceRays(inout Ray primaryRay) {
 		float r0 = pow((1.f - proxy)/(1.f + proxy), 2.f); // assume everything else is just air
 		float F = r0 + (1.f - r0)*pow((1.f - dot(normal, v)), 5.f);
 
-		vec4 reflected = normalize(2.f*normal*(min(dot(normal, v), 1.f)) - v);
+		vec4 reflected = normalize(2.f*normal*(min(max(dot(normal, v), 0.f), 1.f)) - v);
 		Ray reflectionRay = Ray(vertex + MIN_VAL*reflected, reflected);
 		Data reflectionData = intersect(reflectionRay);
 
 		if (reflectionData.isIntersect) {
 			vec4 reflectionColor = reflectionData.mat.reflectedColor;
-			radiance += max(vec4(0.f), gamma*F*(ks*reflectionColor*computeLighting(reflectionRay, reflectionData)));
+			radiance += max(vec4(0.f), F*(ks*reflectionColor*computeLighting(reflectionRay, reflectionData)));
 		}
 
 		vec4 p = vertex;
@@ -442,7 +411,7 @@ vec4 traceRays(inout Ray primaryRay) {
 		Ray refractedRay_b = Ray(q_b, d_q_b);
 		Data refractionData_b = intersect(refractedRay_b);
 
-		if (refractionData_r.isIntersect) {
+		if (false) {
 			/*
 			* Red
 			*/
@@ -467,7 +436,7 @@ vec4 traceRays(inout Ray primaryRay) {
 			/*
 			* Reassemble
 			*/
-			vec4 refractedContrib = kt*gamma*vec4(
+			vec4 refractedContrib = kt*vec4(
 											refractionColor_r.x,
 											refractionColor_g.y,
 											refractionColor_b.z,
@@ -476,8 +445,6 @@ vec4 traceRays(inout Ray primaryRay) {
 
 			radiance += refractedContrib;
 		}
-
-		gamma = 1.f/exp(gamma*gamma);
 
 		currentRay = reflectionRay; // relfections and refractions of reflections
 		currentData = reflectionData; // but not reflections and refractions of refractions
@@ -501,10 +468,18 @@ void main() {
 	float x = position.x; //in film
 	float y = position.y; //in film
 
-	vec4 d = vec4(0.f, 0.f, 1.f, 0.f); // Ortho
-	vec4 P = vec4(x, y, -1.f, 1.f);
+//	vec4 d = vec4(0.f, 0.f, 1.f, 0.f); // Ortho
+//	vec4 P = vec4(x, y, -1.f, 1.f);
 
-	Ray primaryRay = Ray(P, d);
+	vec4 eye = M_film2World*vec4(0.f, 0.f, 0.f, 1.f);
+	
+	vec4 pt_film = vec4(x, y, -1.f, 1.f);
+
+    vec4 pt_world = M_film2World*pt_film;
+
+    vec4 d = normalize(pt_world - eye);
+
+	Ray primaryRay = Ray(eye, d);
 
 	radiance += traceRays(primaryRay);
 	fragColor = radiance;

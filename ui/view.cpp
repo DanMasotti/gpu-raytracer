@@ -21,11 +21,11 @@ View::View(QWidget *parent) : QGLWidget(ViewFormat(), parent),
     m_width(std::min(1000, width())),
     m_angleX(-0.5f),
     m_angleY(0.5f),
-    m_zoom(1.f),
+    m_zoom(15.f),
     m_leftSpeed(0.1f),
     m_centerSpeed(0.02f),
     m_rightSpeed(0.01),
-    m_sleepTime(50),
+    m_sleepTime(1),
     m_depth(2)
 {
 
@@ -72,7 +72,6 @@ void View::initializeGL() {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-
     // Full screen quad
     std::string quadVertexSource = ResourceLoader::loadResourceFileToString(":/shaders/quad.vert");
     std::string rayTracerFragmentSource = ResourceLoader::loadResourceFileToString(":/shaders/rayTracer.frag");
@@ -94,14 +93,6 @@ void View::initializeGL() {
     m_quad->setAttribute(ShaderAttrib::POSITION, 3, 0, VBOAttribMarker::DATA_TYPE::FLOAT, false);
     m_quad->setAttribute(ShaderAttrib::TEXCOORD0, 2, 3*sizeof(GLfloat), VBOAttribMarker::DATA_TYPE::FLOAT, false);
     m_quad->buildVAO();
-
-    // Print the max FBO dimension.
-    bool isBenchMarkingFBO = false;
-    if (isBenchMarkingFBO) {
-        GLint maxRenderBufferSize;
-        glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE_EXT, &maxRenderBufferSize);
-        std::cout << "Max FBO size: " << maxRenderBufferSize << std::endl;
-    }
 
     m_FBO1 = std::make_unique<FBO>(1,
                                   FBO::DEPTH_STENCIL_ATTACHMENT::DEPTH_ONLY,
@@ -138,7 +129,6 @@ void View::paintGL() {
 
     m_quad->draw();
 }
-
 
 
 void View::rebuildMatrices() {
