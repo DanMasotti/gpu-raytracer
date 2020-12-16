@@ -1,10 +1,10 @@
 #version 410 core
 #define MAX_VAL  10000.f
-#define MIN_VAL 0.001f
+#define MIN_VAL 0.01f
 #define PI 3.1415926535897932384626433832795
-#define ks 0.5f
-#define kd 0.5f
-#define kt 0.5f
+#define ks 1.f
+#define kd 1.f
+#define kt 1.f
 
 /*
 *	In From quad.vert
@@ -82,42 +82,39 @@ struct Light {
 */
 //////////////////////////////////////////////////////////////////////////////////////////
 Light sceneLighting[]  = Light[](
-								Light( vec4(10.f, 10.f, -10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ), // key light
-								Light( vec4(-10.f, -10.f, -10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ), // rim light
-								Light( vec4(10.f, 10.f, 10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ) // back light
+								Light( vec4(-100.f, 100.f, -100.f, 1.f), vec4(1.f, 1.f, 1.f, 1.f) ), // key light
+								Light( vec4(100.f, -100.f, -100.f, 1.f), vec4(1.f, 0.9f, 0.9f, 1.f) ), // rim light
+								Light( vec4(-100.f, 100.f, 100.f, 1.f), vec4(0.9f, 0.9f, 1.f, 1.f) ) // back light
 								);
-//Light sceneLighting[]  = Light[](
-//								Light( vec4(10.f, 10.f, -10.f, 1.f), vec4(0.2f, 0.2f, 0.2f, 1.f) ) // key light
-//								);
 
-Material foggyGlass = Material(
-							vec4(0.3f, 0.3f, 0.3f, 1.f), 
-							vec4(0.4f, 0.4f, 0.2f, 1.f), 
-							vec4(0.1f, 0.1f, 0.1f, 1.f), 
-							vec4(0.1f, 0.1f, 0.1f, 1.f), 
-							0.5f,
-							vec3(1.3f, 1.32f, 1.34f),
+Material fog = Material(
+							vec4(0.8353f, 0.7804f, 0.9098f, 0.1f), 
+							vec4(0.8f, 0.8f, 1.f, 0.1f),
+							vec4(0.8f, 0.8f, 0.9f, 0.1f),
+							vec4(0.8f, 0.9f, 1.f, 0.1f),
+							3.f,
+							vec3(1.3f, 1.5f, 1.7f),
 							0.1f
 							);
 
 Material salmon = Material(
-							vec4(0.7f, 0.2f,  0.1f, 1.f), 
-							vec4(0.2f, 0.2f, 0.2f, 1.f), 
-							vec4(0.1f, 0.1f, 0.1f, 1.f), 
-							vec4(0.1f, 0.1f, 0.1f, 1.f), 
-							0.5f,
-							vec3(1.5f, 1.6f, 1.6f),
-							0.7f
+							vec4(1.f, 0.549f,  0.412f, 0.5f), 
+							vec4(1.f, 0.8f,  0.8f, 0.5f), 
+							vec4(1.f, 0.6f,  0.5f, 0.5f), 
+							vec4(1.f, 0.549f,  0.412f, 0.5f), 
+							4.f,
+							vec3(1.5f, 1.6f, 1.7f),
+							0.5f
 							);
 
 Material forest = Material(
-							vec4(0.1f, 0.7f, 0.2f, 1.f),
-							vec4(0.2f, 0.3f, 0.2f, 1.f), 
-							vec4(0.3f, 0.3f, 0.2f, 1.f), 
-							vec4(0.2f, 0.2f, 0.2f, 1.f), 
-							0.2f,
-							vec3(2.f),
-							0.9f
+							vec4(0.133f, 0.545f, 0.133f, 0.8f),
+							vec4(0.8f, 1.f, 0.8f, 0.8f),
+							vec4(0.2f, 0.5f, 0.2f, 0.8f),
+							vec4(0.2f, 0.6f, 0.2f, 0.8f),
+							5.f,
+							vec3(1.8f, 1.9f, 2.f),
+							0.6f
 							);	
 							
 float smallRadius = 0.25f;
@@ -145,7 +142,7 @@ mat4 centerSphereTransformation = transpose(mat4(
 
 Sphere leftSphere = Sphere(leftSphereTransformation, salmon);
 Sphere rightSphere = Sphere(rightSphereTransformation, forest);
-Sphere centerSphere = Sphere(centerSphereTransformation, foggyGlass);
+Sphere centerSphere = Sphere(centerSphereTransformation, fog);
 
 Sphere sceneSpheres[] = Sphere[](leftSphere, centerSphere, rightSphere);
 
@@ -155,6 +152,12 @@ Sphere sceneSpheres[] = Sphere[](leftSphere, centerSphere, rightSphere);
 *	RAY TRACER
 */
 ////////////////////////////////////////////////////////////////////////////////
+float clip(float x, float a, float b) {
+	// x -> [a, b]
+	return min(b, max(x, a));
+}
+
+
 vec2 getQuadradicRoots(float A, float B, float C) {
 	float det = B*B - 4*A*C;
 	
@@ -201,7 +204,7 @@ Data sphereRayIntersect(inout Sphere sphere, inout Ray ray) {
 	vec2 tVals = getQuadradicRoots(A, B, C);
 
 	Data data;
-	data.isIntersect = false; // false until otherwise proven true
+	data.isIntersect = false; 
 	data.mat = sphere.mat;
 	
 	data.t = min(tVals.x, tVals.y);
@@ -221,7 +224,7 @@ Data intersect(inout Ray ray) {
 
 	float t = MAX_VAL;
 
-	for (int i = 0; i < 3; i++){ // for each Sphere
+	for (int i = 0; i < sceneSpheres.length(); i++){ // for each Sphere
 		Sphere sphere = sceneSpheres[i];
 		mat4 transformation = sphere.transformation;
 
@@ -241,7 +244,8 @@ Data intersect(inout Ray ray) {
 			retrieved.normal = MtInv*retrieved.normal;
 			data = retrieved;
 		}
-	}
+	} 
+
 	return data;
 }
 
@@ -273,7 +277,7 @@ bool checkOcclusions(inout Ray ray, inout Data data, inout Light light) {
 vec4 computeLighting(inout Ray ray, inout Data data) {
 	vec4 radiance = vec4(0.f, 0.f, 0.f, 0.f);
 
-	for (int i = 0; i < 4; i++) { // for each light in the scene
+	for (int i = 0; i < sceneLighting.length(); i++) { // for each light in the scene
 		Light light = sceneLighting[i];
 
 		if (checkOcclusions(ray, data, light)) {
@@ -287,14 +291,15 @@ vec4 computeLighting(inout Ray ray, inout Data data) {
 		vec4 vertexToLight = lightPosition - vertex;
 
 		float dist = distance(light.position, vertex);
-		float denom = exp(dist*dist);
+		float denom = 100.f*exp(dist*dist);
 		float attenuation = min(1.f, 1.f/denom);
-		
-		float cosTheta =  min(1.f, max(0.f, dot(normalize(normal.xyz), normalize(vertexToLight.xyz))));
+
+
+		float cosTheta = clip(dot(normalize(normal.xyz), normalize(vertexToLight.xyz)), 0.f, 1.f);	
 		vec4 diffuseComponent = attenuation*I*kd*data.mat.diffuseColor*cosTheta;
 
-		vec4 reflected = -normalize(2.f*normal*(min(max(dot(normal, vertexToLight), 0.f), 1.f)) - vertexToLight);
-		float cosPhi = min(1.f, max(0.f, dot(reflected.xyz, ray.d.xyz)));
+		vec4 reflected = -normalize(2.f*normal*(clip(dot(normal.xyz, vertexToLight.xyz), 0.f, 1.f)) - vertexToLight);
+		float cosPhi = clip(dot(reflected.xyz, ray.d.xyz), 0.f, 1.f);
 		vec4 specularComponent = I*ks*data.mat.specularColor*pow(cosPhi, data.mat.shininess);
 
 		vec4 ambientComponent = vec4(0.f);
@@ -303,11 +308,12 @@ vec4 computeLighting(inout Ray ray, inout Data data) {
 		radiance += diffuseComponent;
 		radiance += specularComponent;
 
-		radiance.x = min(max(radiance.x, 0.f), 1.f);
-		radiance.y = min(max(radiance.y, 0.f), 1.f);
-		radiance.z = min(max(radiance.z, 0.f), 1.f);
-		radiance.w = min(max(radiance.w, 0.f), 1.f);
+		radiance.x = clip(radiance.x, 0.f, 1.f);
+		radiance.y = clip(radiance.y, 0.f, 1.f);
+		radiance.z = clip(radiance.z, 0.f, 1.f);
+		radiance.w = clip(radiance.w, 0.f, 1.f);
 	}
+
 	return radiance;
 }
 
@@ -318,7 +324,7 @@ vec4 traceRays(inout Ray primaryRay) {
 	Data primaryData = intersect(primaryRay);
 	if (primaryData.isIntersect) { // directLight
 		radiance += computeLighting(primaryRay, primaryData);
-	} 
+	}
 
 	Ray currentRay = primaryRay;
 	Data currentData = primaryData;
@@ -330,130 +336,136 @@ vec4 traceRays(inout Ray primaryRay) {
 
 		vec4 normal = currentData.normal;
 		vec4 v = currentRay.P + currentRay.d;
-
-		vec3 ior = currentData.mat.ior;
-		float ior_red = ior.x;
-		float ior_green = ior.y;
-		float ior_blue = ior.z;
-
-		float proxy = (ior_red + ior_green + ior_blue)/3.f;
-
-		float r0 = pow((1.f - proxy)/(1.f + proxy), 2.f); // assume everything else is just air
-		float F = r0 + (1.f - r0)*pow((1.f - dot(normal, v)), 5.f);
-
-		vec4 reflected = normalize(2.f*normal*(min(max(dot(normal, v), 0.f), 1.f)) - v);
+		
+		vec4 reflectionComponent = vec4(0.f);
+		
+		// reflection pass
+		vec4 reflected = normalize(2.f*normal*(clip(dot(normal.xyz, v.xyz), 0.f, 1.f)) - v);
 		Ray reflectionRay = Ray(vertex + MIN_VAL*reflected, reflected);
 		Data reflectionData = intersect(reflectionRay);
 
 		if (reflectionData.isIntersect) {
 			vec4 reflectionColor = reflectionData.mat.reflectedColor;
-			radiance += max(vec4(0.f), F*(ks*reflectionColor*computeLighting(reflectionRay, reflectionData)));
+			reflectionComponent += max(vec4(0.f), ks*reflectionColor*computeLighting(reflectionRay, reflectionData));
 		}
 
-		vec4 p = vertex;
-		vec4 n_p = currentData.normal;
-		p = p + MIN_VAL*(-n_p);
-		vec4 hitPoint = p + currentData.t*currentRay.d;
+		vec4 indirectComponent = vec4(0.f);
+
+		{// refraction pass
+			vec3 ior = currentData.mat.ior;
+			float ior_red = ior.x;
+			float ior_green = ior.y;
+			float ior_blue = ior.z;
+
+			{ // red wavelength
+				float r0 = pow((1.f - ior_red)/(1.f + ior_red), 2.f); // assume everything else is just air
+				float F = r0 + (1.f - r0)*pow((1.f - clip(dot(normal.xyz, v.xyz), 0.f, 1.f)), 5.f);
+
+				vec4 p = vertex;
+				vec4 n_p = currentData.normal;
+				p = p + MIN_VAL*(-n_p);
+				vec4 hitPoint = p + currentData.t*currentRay.d;
+
+				vec4 d_p = vec4(normalize(refract(n_p.xyz, hitPoint.xyz, ior_red)), 0.f);
+				Ray throughRay = Ray(p, d_p);
+				Data throughData = intersect(throughRay);
+
+				vec4 q = p + throughData.t*d_p;
+				vec4 n_q = throughData.normal;
+
+				q = q + MIN_VAL*n_q;
+				vec4 otherside = q + throughData.t*throughRay.d;
+
+				vec4 d_q = vec4(normalize(refract(-n_q.xyz, otherside.xyz, 1.f/ior_red)), 0.f);
+				Ray refractedRay = Ray(q, d_q);
+				Data refractionData = intersect(refractedRay);
+
+				if (refractionData.isIntersect) {
+					vec4 retrievedLighting  = computeLighting(refractedRay, refractionData);
+					vec4 transparencyColor = refractionData.mat.tranparencyColor;
+					vec4 refractionComponent = max(vec4(0.f), kt*transparencyColor*retrievedLighting);
+
+					indirectComponent.x += F*reflectionComponent.x + (1.f - F)*refractionComponent.x;
+				}
+			}
+
+
+			{ // green wavelength
+				float r0 = pow((1.f - ior_green)/(1.f + ior_green), 2.f); // assume everything else is just air
+				float F = r0 + (1.f - r0)*pow((1.f - clip(dot(normal.xyz, v.xyz), 0.f, 1.f)), 5.f);
+
+				vec4 p = vertex;
+				vec4 n_p = currentData.normal;
+				p = p + MIN_VAL*(-n_p);
+				vec4 hitPoint = p + currentData.t*currentRay.d;
+
+				vec4 d_p = vec4(normalize(refract(n_p.xyz, hitPoint.xyz, ior_green)), 0.f);
+				Ray throughRay = Ray(p, d_p);
+				Data throughData = intersect(throughRay);
+
+				vec4 q = p + throughData.t*d_p;
+				vec4 n_q = throughData.normal;
+
+				q = q + MIN_VAL*n_q;
+				vec4 otherside = q + throughData.t*throughRay.d;
+
+				vec4 d_q = vec4(normalize(refract(-n_q.xyz, otherside.xyz, 1.f/ior_green)), 0.f);
+				Ray refractedRay = Ray(q, d_q);
+				Data refractionData = intersect(refractedRay);
+
+				if (refractionData.isIntersect) {
+					vec4 retrievedLighting  = computeLighting(refractedRay, refractionData);
+					vec4 transparencyColor = refractionData.mat.tranparencyColor;
+					vec4 refractionComponent = max(vec4(0.f), kt*transparencyColor*retrievedLighting);
+
+					indirectComponent.y += F*reflectionComponent.y + (1.f - F)*refractionComponent.y;
+				}
+			}
+
+
+			{ // blue wavelength
+				float r0 = pow((1.f - ior_blue)/(1.f + ior_blue), 2.f); // assume everything else is just air
+				float F = r0 + (1.f - r0)*pow((1.f - clip(dot(normal.xyz, v.xyz), 0.f, 1.f)), 5.f);
+
+				vec4 p = vertex;
+				vec4 n_p = currentData.normal;
+				p = p + MIN_VAL*(-n_p);
+				vec4 hitPoint = p + currentData.t*currentRay.d;
+
+				vec4 d_p = vec4(normalize(refract(n_p.xyz, hitPoint.xyz, ior_blue)), 0.f);
+				Ray throughRay = Ray(p, d_p);
+				Data throughData = intersect(throughRay);
+
+				vec4 q = p + throughData.t*d_p;
+				vec4 n_q = throughData.normal;
+
+				q = q + MIN_VAL*n_q;
+				vec4 otherside = q + throughData.t*throughRay.d;
+
+				vec4 d_q = vec4(normalize(refract(-n_q.xyz, otherside.xyz, 1.f/ior_blue)), 0.f);
+				Ray refractedRay = Ray(q, d_q);
+				Data refractionData = intersect(refractedRay);
+
+				if (refractionData.isIntersect) {
+					vec4 retrievedLighting  = computeLighting(refractedRay, refractionData);
+					vec4 transparencyColor = refractionData.mat.tranparencyColor;
+					vec4 refractionComponent = max(vec4(0.f), kt*transparencyColor*retrievedLighting);
+
+					indirectComponent.z += F*reflectionComponent.z + (1.f - F)*refractionComponent.z;
+				}
+			}
+		}
 		
-		/*
-		* 
-		*	Refract different wavelengths
-		*	All red wavelength:
-		*
-		*/
-		vec4 d_p_r = vec4(normalize(refract(n_p.xyz, hitPoint.xyz, ior_red)), 0.f);
-		Ray throughRay_r = Ray(p, d_p_r);
-		Data throughData_r = intersect(throughRay_r);
+		radiance += indirectComponent;
 
-		vec4 q_r = p + throughData_r.t*d_p_r;
-		vec4 n_q_r = throughData_r.normal;
-
-		q_r = q_r + MIN_VAL*n_q_r;
-		vec4 otherside_r = q_r + throughData_r.t*throughRay_r.d;
-
-		vec4 d_q_r = vec4(normalize(refract(-n_q_r.xyz, otherside_r.xyz, 1.f/ior_red)), 0.f);
-		Ray refractedRay_r = Ray(q_r, d_q_r);
-		Data refractionData_r = intersect(refractedRay_r);
-
-		/*
-		* All green wavelength
-		*
-		*/
-		vec4 d_p_g = vec4(normalize(refract(n_p.xyz, hitPoint.xyz, ior_green)), 0.f);
-		Ray throughRay_g = Ray(p, d_p_g);
-		Data throughData_g = intersect(throughRay_g);
-
-		vec4 q_g = p + throughData_g.t*d_p_g;
-		vec4 n_q_g = throughData_g.normal;
-
-		q_g = q_g + MIN_VAL*n_q_g;
-		vec4 otherside_g = q_g + throughData_g.t*throughRay_g.d;
-
-		vec4 d_q_g = vec4(normalize(refract(-n_q_g.xyz, otherside_g.xyz, 1.f/ior_green)), 0.f);
-		Ray refractedRay_g = Ray(q_g, d_q_g);
-		Data refractionData_g = intersect(refractedRay_g);
-
-		/*
-		*  All blue wavelength
-		*
-		*/
-		vec4 d_p_b = vec4(normalize(refract(n_p.xyz, hitPoint.xyz, ior_blue)), 0.f);
-		Ray throughRay_b = Ray(p, d_p_b);
-		Data throughData_b = intersect(throughRay_b);
-
-		vec4 q_b = p + throughData_b.t*d_p_b;
-		vec4 n_q_b = throughData_b.normal;
-
-		q_b = q_b + MIN_VAL*n_q_b;
-		vec4 otherside_b = q_b + throughData_b.t*throughRay_b.d;
-
-		vec4 d_q_b = vec4(normalize(refract(-n_q_b.xyz, otherside_b.xyz, 1.f/ior_blue)), 0.f);
-		Ray refractedRay_b = Ray(q_b, d_q_b);
-		Data refractionData_b = intersect(refractedRay_b);
-
-		if (false) {
-			/*
-			* Red
-			*/
-			vec4 retrievedLighting_r  = computeLighting(refractedRay_r, refractionData_r);
-			vec4 transparencyColor_r = refractionData_r.mat.tranparencyColor;
-			vec4 refractionColor_r = transparencyColor_r*retrievedLighting_r;
-
-			/*
-			* Green
-			*/
-			vec4 retrievedLighting_g  = computeLighting(refractedRay_g, refractionData_g);
-			vec4 transparencyColor_g = refractionData_g.mat.tranparencyColor;
-			vec4 refractionColor_g = transparencyColor_g*retrievedLighting_g;
-
-			/*
-			*  Blue
-			*/
-			vec4 retrievedLighting_b  = computeLighting(refractedRay_b, refractionData_b);
-			vec4 transparencyColor_b = refractionData_b.mat.tranparencyColor;
-			vec4 refractionColor_b = transparencyColor_b*retrievedLighting_b; 
-
-			/*
-			* Reassemble
-			*/
-			vec4 refractedContrib = kt*vec4(
-											refractionColor_r.x,
-											refractionColor_g.y,
-											refractionColor_b.z,
-											currentData.mat.alpha
-										);
-
-			radiance += refractedContrib;
-		}
-
-		currentRay = reflectionRay; // relfections and refractions of reflections
-		currentData = reflectionData; // but not reflections and refractions of refractions
+		currentData = reflectionData;
+		currentRay = reflectionRay;
 	}
 
-	radiance.x = min(max(radiance.x, 0.f), 1.f);
-	radiance.y = min(max(radiance.y, 0.f), 1.f);
-	radiance.z = min(max(radiance.z, 0.f), 1.f);
-	radiance.w = min(max(radiance.w, 0.f), 1.f);
+	radiance.x = clip(radiance.x, 0.f, 1.f);
+	radiance.y = clip(radiance.y, 0.f, 1.f);
+	radiance.z = clip(radiance.z, 0.f, 1.f);
+	radiance.w = clip(radiance.w, 0.f, 1.f);
 
 	return radiance;
 };
@@ -464,12 +476,9 @@ vec4 traceRays(inout Ray primaryRay) {
 */
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 void main() {
-	vec4 radiance = vec4(0.1f, 0.1f, 0.1f, 1.f);
+	vec4 radiance = vec4(0.1f, 0.1f, 0.1f, 0.1f);
 	float x = position.x; //in film
 	float y = position.y; //in film
-
-//	vec4 d = vec4(0.f, 0.f, 1.f, 0.f); // Ortho
-//	vec4 P = vec4(x, y, -1.f, 1.f);
 
 	vec4 eye = M_film2World*vec4(0.f, 0.f, 0.f, 1.f);
 	
